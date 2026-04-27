@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // UserProfile Validation
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'email']) &&
+             data.userId is string &&
+             data.email is string &&
+             data.email.size() <= 256;
+    }
+
+    // Task Validation
+    function isValidTask(data) {
+      return data.keys().hasAll(['userId', 'title']) &&
+             data.userId is string &&
+             data.title is string &&
+             data.title.size() <= 200;
+    }
+
+    // Session Validation
+    function isValidSession(data) {
+      return data.keys().hasAll(['userId', 'startTime', 'durationMinutes']) &&
+             data.userId is string &&
+             data.durationMinutes is number;
+    }
+
+    // 1. User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'dailyGoalMinutes']);
+    }
+
+    // 2. Tasks
+    match /users/{userId}/tasks/{taskId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidTask(incoming());
+      allow update: if isOwner(userId) && isValidTask(incoming()) &&
+                    incoming().userId == userId &&
+                    incoming().diff(existing()).affectedKeys().hasAny(['title', 'description', 'priority', 'status', 'dueDate', 'subject']);
+      allow delete: if isOwner(userId);
+    }
+
+    // 3. Sessions
+    match /users/{userId}/sessions/{sessionId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidSession(incoming());
+      // Sessions are usually immutable after creation for integrity
+      allow delete: if isOwner(userId);
+    }
+  }
+}

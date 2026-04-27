@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user focus settings and profile info.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "dailyGoalMinutes": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email"]
+    },
+    "Task": {
+      "title": "Study Task",
+      "description": "A single task for a student.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "subject": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "StudySession": {
+      "title": "Study Session",
+      "description": "Records of study time for analytics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "subject": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "durationMinutes": { "type": "number" }
+      },
+      "required": ["userId", "startTime", "durationMinutes"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "A student's tasks."
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "StudySession",
+      "description": "Study session logs for analytics."
+    }
+  }
+}
